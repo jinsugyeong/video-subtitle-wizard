@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Subtitle Wizard</title>
+    <style>
+        article {
+            margin: 10px auto;
+            width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <article>
+        <form id="vsw">
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="videoUploadRadio" id="inlineRadio1" value="local" checked>
+                <label class="form-check-label" for="inlineRadio1">동영상 직접 올리기</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="videoUploadRadio" id="inlineRadio2" value="url">
+                <label class="form-check-label" for="inlineRadio2">동영상 링크 붙여넣기</label>
+            </div>
+            <div class="mb-3">
+                <input class="form-control" type="file" id="formFile">
+            </div>
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text" id="basic-addon3">주소 붙여넣기</span>
+                    <input type="text" class="form-control" id="basic-url" aria-describedby="basic-addon3 basic-addon4">
+                </div>
+            </div>
+            <div class="row">
+                <label for="inputState" class="form-label col-md-4">영상 언어</label>
+                <select class="form-select" aria-label="Default select example">
+                    <option value="auto">언어감지(자동)</option>
+                    <option value="zh">중국어</option>
+                    <option value="en">영어</option>
+                </select>
+            </div>
+            <div class="row">
+                <label for="inputState" class="form-label col-md-4">번역 언어</label>
+                <select class="form-select" aria-label="Default select example">
+                    <option value="kr">한국어</option>
+                    <option value="en">영어</option>
+                </select>
+            </div>
+        </form>
+    </article>
+</body>
+</html>
