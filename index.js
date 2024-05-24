@@ -7,26 +7,14 @@ const fs = require('fs');
 const util = require('util');
 const pathModule = require('path');
 
-const getTimestamp = function(time) {
-    const arr = time.split(',');
-    const tt = arr[0];
-
-    if(tt != 0) {
-        let hh = parseInt(tt / 60 / 60);
-        let mm = parseInt(tt / 60 % 60);
-        let ss = parseInt(tt % 60);
-
-        hh = (hh < 10) ? '0'+hh : hh;
-        mm = (mm < 10) ? '0'+mm : mm;
-        ss = (ss < 10) ? '0'+ss : ss;
-
-        return hh + `:` + mm + ':' + ss + ',' + arr[1];
-
-    }else {
-        return `00:00:00` + ',' + arr[1];
-    }
-    
-}
+const getTimestamp = (timeInSeconds) => {
+    const pad = (num, size) => ('000' + num).slice(size * -1);
+    const hours = pad(Math.floor(timeInSeconds / 3600), 2);
+    const minutes = pad(Math.floor((timeInSeconds % 3600) / 60), 2);
+    const seconds = pad(Math.floor(timeInSeconds % 60), 2);
+    const milliseconds = pad(Math.floor((timeInSeconds % 1) * 1000), 3);
+    return `${hours}:${minutes}:${seconds},${milliseconds}`;
+};
 
 app.get('/', async function(req, res) {
     const startTime = Date.now(); // 작업 시작 시간 기록
@@ -36,6 +24,7 @@ app.get('/', async function(req, res) {
     const path = './data/20240327.mp4';
     const baseFilename = pathModule.basename(path, pathModule.extname(path));
     const srtFilename = `./subtitle/${baseFilename}.srt`;
+    const segmentsFilename = `./subtitle/${baseFilename}_segments.txt`;
 
     try {
         const file = await util.promisify(fs.readFile)(path);
@@ -53,7 +42,8 @@ app.get('/', async function(req, res) {
 
         const textAnnotations = results[0].annotationResults[0].textAnnotations;
 
-        let outfile = fs.createWriteStream(srtFilename, {flag: 'w'});
+        let outfile = fs.createWriteStream(srtFilename, { flag: 'w' });
+        let segmentsFile = fs.createWriteStream(segmentsFilename, { flag: 'w' });
         let cnt = 1;
         let lastText = '';
         let lastStartTime = 0;
@@ -65,10 +55,10 @@ app.get('/', async function(req, res) {
         textAnnotations.forEach(textAnnotation => {
             if (/^[\u4e00-\u9fff]+$/.test(textAnnotation.text)) {
                 textAnnotation.segments.forEach(segment => {
-                    if (segment.confidence >= 0.65) {
+                    if (segment.confidence >= 0.8) {
                         const time = segment.segment;
-                        const startTime = (time.startTimeOffset.seconds || 0) + `,${(time.startTimeOffset.nanos / 1e6).toFixed(0)}`;
-                        const endTime = (time.endTimeOffset.seconds || 0) + `,${(time.endTimeOffset.nanos / 1e6).toFixed(0)}`;
+                        const startTime = (time.startTimeOffset.seconds || 0) + (time.startTimeOffset.nanos || 0) / 1e9;
+                        const endTime = (time.endTimeOffset.seconds || 0) + (time.endTimeOffset.nanos || 0) / 1e9;
                         allSegments.push({ startTime, endTime, text: textAnnotation.text });
                     }
                 });
@@ -78,9 +68,12 @@ app.get('/', async function(req, res) {
         // Sort segments by startTime
         allSegments.sort((a, b) => a.startTime - b.startTime);
 
-        // Write segments to SRT file
+        // Write segments to SRT file and segments.txt file
         allSegments.forEach(segment => {
             const { startTime, endTime, text } = segment;
+
+            // Write to segments.txt file
+            segmentsFile.write(`Start: ${getTimestamp(startTime)} End: ${getTimestamp(endTime)} Text: ${text}\n`);
 
             // Merge consecutive duplicate subtitles
             if (text === lastText && startTime <= lastEndTime + 1) {
@@ -113,6 +106,10 @@ app.get('/', async function(req, res) {
             console.log('Subtitles generated successfully.'); // 자막 생성 완료 시간 기록
         });
 
+        segmentsFile.end(() => {
+            console.log('Segments file generated successfully.');
+        });
+
         const endTime = Date.now();
         console.log(`Total processing time: ${endTime - startTime} ms`); // 전체 처리 시간 출력
 
@@ -135,4 +132,3 @@ app.use(function(err, req, res, next) {
 app.listen(port, function() {
     console.log(`Example app listening on port ${port}`);
 });
-
